@@ -1,0 +1,5 @@
+http://api.e-stat.go.jp/rest/2.0/app/getStatsData?appId=c18396ba52648c00fa21d7962d6f7440f8618f9c&statsDataId=0003013703&startPosition=100001
+appId: c18396ba52648c00fa21d7962d6f7440f8618f9c
+searchWord: 小売物価統計調査
+<TABLE_INF id="0003013703">
+<STAT_NAME code="00200571">
