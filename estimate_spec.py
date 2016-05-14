@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+import argparse
 import os.path
 import numpy as np
 from scipy import ceil, complex64, float64, hamming, zeros
@@ -8,24 +9,91 @@ from matplotlib import pylab as plt
 import stft
 import cnmf
 
-argv = sys.argv
-argc = len(argv)
-if argc != 3:
-    error()
-wav_file_name = argv[1]
-seed_number = int(argv[2])
-npy_dir = "../npy/"
+# argv = sys.argv
+# argc = len(argv)
+# if argc != 3:
+#     error()
+parser = argparse.ArgumentParser(description='Decompose stereo wav file by CNMF.')
+parser.add_argument('wav_file_name', \
+                    action='store', \
+                    nargs=None, \
+                    const=None, \
+                    default=None, \
+                    type=str, \
+                    choices=None, \
+                    help='wav file name', \
+                    metavar=None)
+parser.add_argument('-s', '--seed_number', \
+                    action='store', \
+                    nargs='?', \
+                    const=None, \
+                    default=0, \
+                    type=int, \
+                    choices=None, \
+                    help='seed_number', \
+                    metavar=None)
+parser.add_argument('-c', '--component_max', \
+                    action='store', \
+                    nargs='?', \
+                    const=None, \
+                    default=10, \
+                    type=int, \
+                    choices=None, \
+                    help='the maximum of candidate number of component', \
+                    metavar=None)
+parser.add_argument('-l', '--loop_max', \
+                    action='store', \
+                    nargs='?', \
+                    const=None, \
+                    default=100, \
+                    type=int, \
+                    choices=None, \
+                    help='the maximum number of loop iteration', \
+                    metavar=None)
+parser.add_argument('-b', '--base_max', \
+                    action='store', \
+                    nargs='?', \
+                    const=None, \
+                    default=100.0, \
+                    type=float, \
+                    choices=None, \
+                    help='the maximum of possible value in bases. This value is used only in model selection and not used in parameter estimation.', \
+                    metavar=None)
+parser.add_argument('-r', '--regularized_max', \
+                    action='store', \
+                    nargs='?', \
+                    const=None, \
+                    default=100, \
+                    type=int, \
+                    choices=None, \
+                    help='the constant which provides regularization. The wav data is regularized so that its maximum value is reduced to this constant.', \
+                    metavar=None)
+parser.add_argument('-d', '--npy_dir', \
+                    action='store', \
+                    nargs='?', \
+                    const=None, \
+                    default='../npy/', \
+                    type=str, \
+                    choices=None, \
+                    help='directory name where npy files are stored.', \
+                    metavar=None)
+args = parser.parse_args()
+wav_file_name = args.wav_file_name
+seed_number = args.seed_number
+npy_dir = args.npy_dir
 os.mkdir(npy_dir)
 seed(seed_number)
 
-window_len = 512 # 512
+window_len = 64 # 512
 band_cnt = int(window_len / 2 + 1)
 step = int(window_len / 2)
 transformer = stft.STFT(hamming(window_len), step)
-raw_wav = np.mean(transformer.read_wav(wav_file_name), axis = 1)
+regularized_max = args.regularized_max
+raw_wav = np.mean(transformer.read_wav(wav_file_name), axis = 1)[::10]
 # raw_wav = transformer.read_wav(wav_file_name)
+raw_wav = (raw_wav / max(raw_wav)) * regularized_max
 raw_wav_len = raw_wav.shape[0]
-test_wav_len = 44100 * 5 # 44100 * 10
+test_wav_len = 4410 * 5 # 44100 * 10
 test_start = np.random.randint(0, raw_wav_len - test_wav_len - 1)
 test_end = test_start + test_wav_len
 wav = (raw_wav[test_start:test_end])
@@ -64,12 +132,12 @@ filtre[missed_start + missed_len:, :] = 1
 n_methods = 5
 convolution_width = 1
 convolution_max = 1
-gamma_shape = 1.00001
+gamma_shape = 2.0
 gamma_scale = 2.0
 convergence_threshold = 0.00000001
-loop_max = 200
-base_max = 1000000000
-component_max = 40 # 20
+loop_max = args.loop_max
+base_max = args.base_max
+component_max = args.component_max
 conventional_factorizer = cnmf.CNMF(None, convolution_width,
                        convolution_max,
                        gamma_shape, gamma_scale,
@@ -88,8 +156,8 @@ for i_method in range(n_methods):
     conventional_recovered_power_spec.append(conventional_factorizer.convolute(conventional_factorizer.best_actvt_given_width[i_method], conventional_factorizer.best_base_given_width[i_method]))
     conventional_divergence.append(conventional_factorizer.divergence(true_power_spec, np.ones(true_power_spec.shape), conventional_factorizer.best_actvt_given_width[i_method], conventional_factorizer.best_base_given_width[i_method]))
 
-convolution_width = 100 # 100
-convolution_max = 100 # 100
+convolution_width = 10 # 100
+convolution_max = 10 # 100
 convolutive_factorizer = cnmf.CNMF(None, convolution_width,
                        convolution_max,
                        gamma_shape, gamma_scale,
@@ -116,6 +184,9 @@ np.save(npy_dir + 'conventional_base.npy', conventional_base)
 np.save(npy_dir + 'conventional_recovered_power_spec.npy', conventional_recovered_power_spec)
 np.save(npy_dir + 'conventional_divergence.npy', conventional_divergence)
 np.save(npy_dir + 'convolutive_base_cnt.npy', convolutive_base_cnt)
+for l in range(len(convolutive_actvt)):
+    print('convolutive_actvt_size', l, convolutive_actvt[l].shape)
+print('convolutive_actvt', convolutive_actvt)
 np.save(npy_dir + 'convolutive_actvt.npy', convolutive_actvt)
 np.save(npy_dir + 'convolutive_base.npy', convolutive_base)
 np.save(npy_dir + 'convolutive_recovered_power_spec.npy', convolutive_recovered_power_spec)

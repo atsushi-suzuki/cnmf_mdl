@@ -76,6 +76,7 @@ class CNMF:
             component_range = range(1, self.component_max + 1)
         else:
             component_range = [self.n_components]
+        print("convolution_range", convolution_range)
         for convolution_width in convolution_range:
             log_integral_term = self.__log_integral_term(convolution_width,
                                                          n_samples, n_features,
