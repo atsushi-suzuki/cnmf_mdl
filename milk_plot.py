@@ -6,16 +6,64 @@ import numpy as np
 from scipy import ceil, complex64, float64, hamming, zeros
 from matplotlib import pylab as plt
 import matplotlib
+import argparse
 
-argv = sys.argv
-argc = len(argv)
-if argc != 6:
-    error()
-dat_dir = argv[1]
-n_rows = int(argv[2])
-width = int(argv[3])
-height = int(argv[4])
-font_size = int(argv[5])
+parser = argparse.ArgumentParser(description='plot the result of the experiment of CNMF for artificial data.')
+parser.add_argument('-d', '--dat_dir', \
+                    action='store', \
+                    nargs='?', \
+                    const=None, \
+                    default='./npy', \
+                    type=str, \
+                    choices=None, \
+                    help='directory where data are stored', \
+                    metavar=None)
+parser.add_argument('-r', '--n_rows', \
+                    action='store', \
+                    nargs='?', \
+                    const=None, \
+                    default=2, \
+                    type=int, \
+                    choices=None, \
+                    help='the number of rows', \
+                    metavar=None)
+parser.add_argument('-w', '--width', \
+                    action='store', \
+                    nargs='?', \
+                    const=None, \
+                    default=28, \
+                    type=int, \
+                    choices=None, \
+                    help='width', \
+                    metavar=None)
+parser.add_argument('-he', '--height', \
+                    action='store', \
+                    nargs='?', \
+                    const=None, \
+                    default=10, \
+                    type=int, \
+                    choices=None, \
+                    help='height', \
+                    metavar=None)
+parser.add_argument('-f', '--font_size', \
+                    action='store', \
+                    nargs='?', \
+                    const=None, \
+                    default=24, \
+                    type=int, \
+                    choices=None, \
+                    help='font size', \
+                    metavar=None)
+args = parser.parse_args()
+# argv = sys.argv
+# argc = len(argv)
+# if argc != 6:
+#     error()
+dat_dir = args.dat_dir
+n_rows = args.n_rows
+width = args.width
+height = args.height
+font_size = args.font_size
 best_base = np.load(dat_dir + '/base.npy')
 print(best_base.shape)
 n_cols = math.ceil(best_base.shape[1] / n_rows)
@@ -44,5 +92,6 @@ for i_base in range(best_base.shape[1]):
     ax.set_xlabel('time / month', fontsize = font_size)
     im = ax.imshow(best_base[:,i_base,:].T, aspect = 1, origin = 0, interpolation='none', clim=(0, np.max(best_base)), cmap=plt.cm.binary)
 cax,kw = matplotlib.colorbar.make_axes(fig.axes)
-fig.colorbar(im, cax=cax, **kw)
+cbar = fig.colorbar(im, cax=cax, **kw)
+cbar.ax.tick_params(labelsize=font_size)
 plt.savefig(dat_dir+'/base.png')

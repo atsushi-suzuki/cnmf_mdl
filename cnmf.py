@@ -149,16 +149,16 @@ class CNMF:
         for loop_idx in range(0, self.loop_max):
             new_actvt = self.__actvt_numerator(X, filtre,
                                                actvt, base, gamma_shape)\
-                        / self.__actvt_denominator(filtre, base, gamma_scale)
+                        / (self.__actvt_denominator(filtre, base, gamma_scale) + np.finfo(float).eps)
             # print('actvt: ', self.__code_len(X, filtre, actvt, base,
             #                                  gamma_shape, gamma_scale))
             for i_convolution in range(0, convolution_width):
                 new_base[i_convolution, :, :]\
                     = (base[i_convolution, :, :]\
                        * ((self.time_shift(actvt, i_convolution).T)\
-                       .dot(filtre * X / self.convolute(actvt, base)))\
-                       / (self.time_shift(actvt, i_convolution).T)\
-                       .dot(filtre))
+                       .dot(filtre * X / (self.convolute(actvt, base) + np.finfo(float).eps)))\
+                       / ((self.time_shift(actvt, i_convolution).T)\
+                       .dot(filtre) + np.finfo(float).eps))
             # print('base: ', self.__code_len(X, filtre, actvt, base,
             #                                 gamma_shape, gamma_scale))
             code_len_transition[loop_idx]\
@@ -182,7 +182,7 @@ class CNMF:
         (convolution_width, n_components, n_features) = base.shape
         ans = np.zeros([n_samples, n_components])
         for i_convolution in range(0, convolution_width):
-            ans += (self.inv_time_shift(filtre * X / self.convolute(actvt, base), i_convolution)).dot(base[i_convolution, :, :].T)
+            ans += (self.inv_time_shift(filtre * X / (self.convolute(actvt, base) + np.finfo(float).eps), i_convolution)).dot(base[i_convolution, :, :].T)
         ans = actvt * ans
         ans = (gamma_shape - 1) + ans
         return ans
@@ -210,14 +210,14 @@ class CNMF:
         divergence = self.__divergence(X, filtre, actvt, base)
         criterion_value[self.aic1]\
             = divergence\
-            + 2 * convolution_width * n_components * (n_features + 1)
+            + convolution_width * n_components * (n_features + 1)
         criterion_value[self.bic1]\
             = divergence\
             + 0.5 * convolution_width * n_components * (n_features + 1)\
             * np.log(n_samples)
         criterion_value[self.aic2]\
             = code_len\
-            + 2 * convolution_width * n_components * (n_features + 1)
+            + convolution_width * n_components * (n_features + 1)
         criterion_value[self.bic2]\
             = code_len\
             + 0.5 * convolution_width * n_components * (n_features + 1)\
